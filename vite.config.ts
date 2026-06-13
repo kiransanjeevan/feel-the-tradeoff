@@ -8,6 +8,9 @@ export default defineConfig({
   base: './',
   test: {
     globals: true,
-    environment: 'node', // metrics.ts is pure — no DOM needed. Switch to 'jsdom' when component tests arrive.
+    // metrics.ts is pure (node); component tests opt into jsdom via a
+    // `// @vitest-environment jsdom` comment at the top of their file.
+    environment: 'node',
+    setupFiles: ['./vitest.setup.ts'],
   },
 });

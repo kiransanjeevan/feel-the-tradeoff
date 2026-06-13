@@ -1,88 +1,249 @@
 import { useMemo, useState } from 'react';
-import { metricsAt, confusionMatrix, expectedCost } from './metrics';
+import {
+  metricsAt,
+  confusionMatrix,
+  fBeta,
+  sweep,
+  linspaceThresholds,
+  expectedCost,
+  costOptimalThreshold,
+  optimalFBetaThreshold,
+} from './metrics';
 import { PRESETS, DEFAULT_PRESET } from './presets';
+import { ScoreAxis } from './components/ScoreAxis';
+import { SweepChart, type Marker } from './components/SweepChart';
+import { CostChart } from './components/CostChart';
+import { COLORS } from './theme';
+import './styles.css';
 
-// Phase-0 shell: proves the metrics core is wired end-to-end (a real threshold
-// slider recomputing P/R/F1 + confusion matrix live). The polished UI, charts,
-// and cost viz land in Phase 1 (v1.0). This is intentionally minimal.
+const THRESHOLDS = linspaceThresholds(101);
+const BETA_PRESETS = [
+  { label: 'F0.5', beta: 0.5, hint: 'precision-weighted' },
+  { label: 'F1', beta: 1, hint: 'balanced' },
+  { label: 'F2', beta: 2, hint: 'recall-weighted' },
+];
+
 export function App() {
   const [presetId, setPresetId] = useState(DEFAULT_PRESET.id);
   const [threshold, setThreshold] = useState(0.5);
+  const [beta, setBeta] = useState(1);
+  const [costFP, setCostFP] = useState(DEFAULT_PRESET.costFP);
+  const [costFN, setCostFN] = useState(DEFAULT_PRESET.costFN);
+  const [predict, setPredict] = useState<null | 'up' | 'down'>(null);
 
-  const preset = useMemo(
-    () => PRESETS.find((p) => p.id === presetId) ?? DEFAULT_PRESET,
-    [presetId],
+  const preset = useMemo(() => PRESETS.find((p) => p.id === presetId) ?? DEFAULT_PRESET, [presetId]);
+  const docs = preset.docs;
+
+  function selectPreset(id: string) {
+    const p = PRESETS.find((x) => x.id === id) ?? DEFAULT_PRESET;
+    setPresetId(id);
+    setCostFP(p.costFP);
+    setCostFN(p.costFN);
+    setPredict(null);
+  }
+
+  // Everything below recomputes on every drag — pure, memoized, < 50 ms (NFR).
+  const sweepData = useMemo(() => sweep(docs, THRESHOLDS), [docs]);
+  const m = metricsAt(docs, threshold);
+  const cm = confusionMatrix(docs, threshold);
+  const fbetaVal = fBeta(m.precision, m.recall, beta);
+  const fbetaOpt = useMemo(() => optimalFBetaThreshold(docs, beta, THRESHOLDS), [docs, beta]);
+  const costData = useMemo(
+    () => THRESHOLDS.map((t) => ({ threshold: t, cost: expectedCost(docs, t, costFP, costFN) })),
+    [docs, costFP, costFN],
   );
+  const costOpt = useMemo(() => costOptimalThreshold(docs, costFP, costFN, THRESHOLDS), [docs, costFP, costFN]);
 
-  const m = metricsAt(preset.docs, threshold);
-  const cm = confusionMatrix(preset.docs, threshold);
-  const cost = expectedCost(preset.docs, threshold, preset.costFP, preset.costFN);
+  const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+  const betaLabel = beta === 1 ? 'F1' : `F${beta}`;
 
-  const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+  const sweepMarkers: Marker[] = [
+    { x: fbetaOpt.threshold, label: `${betaLabel}-best`, color: COLORS.fbetaOptimal },
+  ];
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 720, margin: '2rem auto', padding: '0 1rem' }}>
+    <div className="wrap">
       <h1>Retrieval Metrics Lab</h1>
-      <p style={{ color: '#555' }}>Phase 0 shell — the metrics core is live. UI polish comes in v1.0.</p>
+      <p className="tagline">
+        Move the slider and feel the precision / recall / F1 trade-off — with a business-cost lens.
+      </p>
 
-      <label>
-        Scenario:{' '}
-        <select value={presetId} onChange={(e) => setPresetId(e.target.value)}>
-          {PRESETS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
+      {/* Scenario */}
+      <section className="card">
+        <h2>Scenario</h2>
+        <div className="controls">
+          <select value={presetId} onChange={(e) => selectPreset(e.target.value)} aria-label="Scenario">
+            {PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <span className="muted">{preset.blurb}</span>
+        </div>
+        <p className="lesson" style={{ marginTop: '0.9rem' }}>
+          {preset.lesson}
+        </p>
+      </section>
+
+      {/* Predict-then-reveal beat (active recall) */}
+      {predict === null ? (
+        <section className="card">
+          <h2>Predict first</h2>
+          <p style={{ margin: '0 0 0.8rem' }}>
+            Before you touch the slider — as you raise the threshold, what happens to <strong>precision</strong>?
+          </p>
+          <div className="controls">
+            <button className="btn" onClick={() => setPredict('up')}>
+              It goes up
+            </button>
+            <button className="btn" onClick={() => setPredict('down')}>
+              It goes down
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="card">
+          <h2>Predict first</h2>
+          <p className="lesson">
+            {predict === 'up' ? '✓ Usually right — ' : 'Look closely — '}
+            raising the threshold keeps only the highest-scoring docs, so <strong>precision tends to rise while
+            recall falls</strong>. It isn't guaranteed monotonic, though: drag the slider and watch the curves
+            cross below.
+            <button className="btn" style={{ marginLeft: '0.6rem' }} onClick={() => setPredict(null)}>
+              reset
+            </button>
+          </p>
+        </section>
+      )}
+
+      {/* Documents & the gate (FR-01 / FR-02) */}
+      <section className="card">
+        <h2>Documents &amp; the threshold gate</h2>
+        <ScoreAxis docs={docs} threshold={threshold} />
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={threshold}
+          onChange={(e) => setThreshold(Number(e.target.value))}
+          aria-label="Score threshold"
+        />
+        <div className="controls" style={{ justifyContent: 'space-between' }}>
+          <span className="controls" style={{ gap: '0.35rem' }}>
+            <span className="dot" style={{ background: COLORS.relevant }} /> relevant
+          </span>
+          <span className="controls" style={{ gap: '0.35rem' }}>
+            <span className="dot" style={{ background: COLORS.irrelevant }} /> irrelevant
+          </span>
+          <span className="muted">faded dots are below the gate (predicted not relevant)</span>
+        </div>
+      </section>
+
+      {/* Metrics + confusion matrix (FR-01) */}
+      <section className="card">
+        <h2>At this threshold</h2>
+        <div className="row">
+          <div className="stat">
+            <div className="label">Precision</div>
+            <div className="value" style={{ color: COLORS.precision }}>
+              {pct(m.precision)}
+            </div>
+          </div>
+          <div className="stat">
+            <div className="label">Recall</div>
+            <div className="value" style={{ color: COLORS.recall }}>
+              {pct(m.recall)}
+            </div>
+          </div>
+          <div className="stat">
+            <div className="label">{betaLabel}</div>
+            <div className="value" style={{ color: COLORS.f1 }}>
+              {pct(fbetaVal)}
+            </div>
+          </div>
+          <div className="confusion" style={{ marginLeft: 'auto' }}>
+            <div className="cell tp">
+              <div className="n">{cm.tp}</div>
+              <div className="k">True Pos</div>
+            </div>
+            <div className="cell fp">
+              <div className="n">{cm.fp}</div>
+              <div className="k">False Pos</div>
+            </div>
+            <div className="cell fn">
+              <div className="n">{cm.fn}</div>
+              <div className="k">False Neg</div>
+            </div>
+            <div className="cell tn">
+              <div className="n">{cm.tn}</div>
+              <div className="k">True Neg</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Threshold sweep (FR-03) + F-beta control (FR-05) */}
+      <section className="card">
+        <h2>Threshold sweep</h2>
+        <SweepChart data={sweepData} threshold={threshold} markers={sweepMarkers} />
+        <div className="controls" style={{ marginTop: '0.5rem' }}>
+          <span className="muted">Optimize for:</span>
+          {BETA_PRESETS.map((b) => (
+            <button
+              key={b.label}
+              className={`btn ${beta === b.beta ? 'active' : ''}`}
+              onClick={() => setBeta(b.beta)}
+              title={b.hint}
+            >
+              {b.label}
+            </button>
           ))}
-        </select>
-      </label>
-      <p style={{ color: '#555', fontStyle: 'italic' }}>{preset.blurb}</p>
+          <button className="btn btn-primary" onClick={() => setThreshold(fbetaOpt.threshold)}>
+            jump to {betaLabel}-best ({fbetaOpt.threshold.toFixed(2)})
+          </button>
+        </div>
+      </section>
 
-      <label style={{ display: 'block', margin: '1.5rem 0 0.5rem' }}>
-        Threshold: <strong>{threshold.toFixed(2)}</strong>
-      </label>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.01}
-        value={threshold}
-        onChange={(e) => setThreshold(Number(e.target.value))}
-        style={{ width: '100%' }}
-        aria-label="Score threshold"
-      />
+      {/* Cost of error (FR-06) — the differentiator */}
+      <section className="card">
+        <h2>Cost of error — metric → decision</h2>
+        <div className="controls" style={{ marginBottom: '0.75rem' }}>
+          <label>
+            Cost of a false positive{' '}
+            <input
+              type="number"
+              min={0}
+              value={costFP}
+              onChange={(e) => setCostFP(Math.max(0, Number(e.target.value)))}
+            />
+          </label>
+          <label>
+            Cost of a false negative{' '}
+            <input
+              type="number"
+              min={0}
+              value={costFN}
+              onChange={(e) => setCostFN(Math.max(0, Number(e.target.value)))}
+            />
+          </label>
+        </div>
+        <CostChart data={costData} threshold={threshold} optimal={costOpt.threshold} />
+        <div className="controls" style={{ marginTop: '0.5rem' }}>
+          <span className="muted">
+            Cost-optimal threshold is <strong>{costOpt.threshold.toFixed(2)}</strong> (expected cost {costOpt.cost.toFixed(0)}).
+            You're paying <strong>{expectedCost(docs, threshold, costFP, costFN).toFixed(0)}</strong>.
+          </span>
+          <button className="btn btn-primary" onClick={() => setThreshold(costOpt.threshold)}>
+            jump to cost-optimal
+          </button>
+        </div>
+      </section>
 
-      <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1.5rem' }}>
-        <Stat label="Precision" value={pct(m.precision)} />
-        <Stat label="Recall" value={pct(m.recall)} />
-        <Stat label="F1" value={pct(m.f1)} />
-        <Stat label="Expected cost" value={cost.toFixed(0)} />
-      </div>
-
-      <table style={{ marginTop: '1.5rem', borderCollapse: 'collapse' }}>
-        <tbody>
-          <tr>
-            <Cell>TP {cm.tp}</Cell>
-            <Cell>FP {cm.fp}</Cell>
-          </tr>
-          <tr>
-            <Cell>FN {cm.fn}</Cell>
-            <Cell>TN {cm.tn}</Cell>
-          </tr>
-        </tbody>
-      </table>
-    </main>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: 12, color: '#777', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
+      <footer className="muted" style={{ textAlign: 'center', marginTop: '2rem' }}>
+        All math is computed client-side by a unit-tested core. No data leaves your browser.
+      </footer>
     </div>
   );
-}
-
-function Cell({ children }: { children: React.ReactNode }) {
-  return <td style={{ border: '1px solid #ccc', padding: '0.5rem 1rem', minWidth: 60 }}>{children}</td>;
 }
