@@ -9,10 +9,12 @@ import {
   costOptimalThreshold,
   optimalFBetaThreshold,
 } from './metrics';
-import { PRESETS, DEFAULT_PRESET } from './presets';
+import { DEFAULT_PRESET } from './presets';
 import { ScoreAxis } from './components/ScoreAxis';
 import { SweepChart, type Marker } from './components/SweepChart';
 import { CostChart } from './components/CostChart';
+import { DataSourcePanel, type SourceMeta } from './components/DataSourcePanel';
+import type { ScoredDoc } from './metrics';
 import { COLORS } from './theme';
 import './styles.css';
 
@@ -24,22 +26,19 @@ const BETA_PRESETS = [
 ];
 
 export function App() {
-  const [presetId, setPresetId] = useState(DEFAULT_PRESET.id);
+  const [docs, setDocs] = useState<ScoredDoc[]>(DEFAULT_PRESET.docs);
   const [threshold, setThreshold] = useState(0.5);
   const [beta, setBeta] = useState(1);
   const [costFP, setCostFP] = useState(DEFAULT_PRESET.costFP);
   const [costFN, setCostFN] = useState(DEFAULT_PRESET.costFN);
   const [predict, setPredict] = useState<null | 'up' | 'down'>(null);
 
-  const preset = useMemo(() => PRESETS.find((p) => p.id === presetId) ?? DEFAULT_PRESET, [presetId]);
-  const docs = preset.docs;
-
-  function selectPreset(id: string) {
-    const p = PRESETS.find((x) => x.id === id) ?? DEFAULT_PRESET;
-    setPresetId(id);
-    setCostFP(p.costFP);
-    setCostFN(p.costFN);
-    setPredict(null);
+  // The data source (presets / CSV / live embeddings) produces ScoredDoc[];
+  // the metrics UI below is identical regardless of where the scores came from.
+  function handleDocs(newDocs: ScoredDoc[], meta: SourceMeta) {
+    setDocs(newDocs);
+    if (meta.costFP !== undefined) setCostFP(meta.costFP);
+    if (meta.costFN !== undefined) setCostFN(meta.costFN);
   }
 
   // Everything below recomputes on every drag — pure, memoized, < 50 ms (NFR).
@@ -68,23 +67,8 @@ export function App() {
         Move the slider and feel the precision / recall / F1 trade-off — with a business-cost lens.
       </p>
 
-      {/* Scenario */}
-      <section className="card">
-        <h2>Scenario</h2>
-        <div className="controls">
-          <select value={presetId} onChange={(e) => selectPreset(e.target.value)} aria-label="Scenario">
-            {PRESETS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <span className="muted">{preset.blurb}</span>
-        </div>
-        <p className="lesson" style={{ marginTop: '0.9rem' }}>
-          {preset.lesson}
-        </p>
-      </section>
+      {/* Data source (FR-07 presets / FR-10 CSV / FR-14 live embeddings) */}
+      <DataSourcePanel onDocs={handleDocs} />
 
       {/* Predict-then-reveal beat (active recall) */}
       {predict === null ? (

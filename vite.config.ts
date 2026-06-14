@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [react()],
   // Relative base so the static build works on GitHub Pages or Vercel without config.
   base: './',
+  // transformers.js ships WASM + workers that Vite's dep pre-bundler mishandles;
+  // it's dynamically imported, so exclude it and let it load as its own chunk.
+  optimizeDeps: { exclude: ['@huggingface/transformers'] },
   test: {
     globals: true,
     // metrics.ts is pure (node); component tests opt into jsdom via a

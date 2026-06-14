@@ -25,6 +25,7 @@ This is a single-page, **zero-backend** lab that turns the precision/recall/F1 t
 - **Tune which error matters** — F0.5 / F1 / F2 controls mark the optimal threshold for your error priority.
 - **Bridge metric → business decision** *(the differentiator)* — set the cost of a false positive vs. a false negative, and the lab finds the **cost-optimal threshold**. This is the part a PM actually owns.
 - **Five real scenarios** — medical triage (a miss can be fatal), spam filtering (false alarms infuriate users), legal discovery (recall is near-sacred), and more — each with its own error-cost asymmetry.
+- **Bring real data** — upload a CSV of `(score, label)`, or type a query + documents and get **real in-browser embeddings** (MiniLM via transformers.js, cosine similarity) feeding the exact same views. No backend; your text never leaves the browser.
 
 ## The metrics are tested — that's the whole point
 
@@ -53,7 +54,7 @@ npm run build     # production build to dist/
 |-------|-------|--------|
 | v0.1 | Framework-agnostic, unit-tested metrics core | ✅ |
 | v1.0 | Interactive MVP — slider, sweep chart, F-beta, cost-of-error, presets | ✅ |
-| v1.5 | CSV upload + **real in-browser embeddings** (transformers.js) — type a query + docs, get real cosine scores feeding the same viz | ⏳ |
+| v1.5 | CSV upload + **real in-browser embeddings** (transformers.js) — type a query + docs, get real cosine scores feeding the same viz | ✅ |
 | v2.0 | PR curve, two-stage retrieval visual (rerank-then-truncate), full @k metric UI, shareable URLs, A/B compare, guided lessons | ⏳ |
 
 ## License

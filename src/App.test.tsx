@@ -53,4 +53,20 @@ describe('App smoke test', () => {
     // the "jump to F2-best" button label should now reference F2
     expect(screen.getByText(/jump to F2-best/)).toBeTruthy();
   });
+
+  it('CSV tab loads sample rows into the metrics', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Upload CSV'));
+    fireEvent.click(screen.getByText('Try a sample'));
+    expect(screen.getByText(/Loaded 10 rows/)).toBeTruthy();
+  });
+
+  it('embeddings tab renders the editor without loading the model', () => {
+    // Importantly does NOT click "Embed & score" — that would download the
+    // model in CI. We only verify the editor mounts.
+    render(<App />);
+    fireEvent.click(screen.getByText('Live embeddings'));
+    expect(screen.getByText('Embed & score')).toBeTruthy();
+    expect(screen.getByDisplayValue('How do I reset my password?')).toBeTruthy();
+  });
 });
