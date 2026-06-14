@@ -55,29 +55,29 @@ export function App() {
 
   const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
   const betaLabel = beta === 1 ? 'F1' : `F${beta}`;
-
-  const sweepMarkers: Marker[] = [
-    { x: fbetaOpt.threshold, label: `${betaLabel}-best`, color: COLORS.fbetaOptimal },
-  ];
+  const sweepMarkers: Marker[] = [{ x: fbetaOpt.threshold, label: `${betaLabel}-best`, color: COLORS.fbetaOptimal }];
 
   return (
     <div className="wrap">
-      <h1>Retrieval Metrics Lab</h1>
-      <p className="tagline">
-        Move the slider and feel the precision / recall / F1 trade-off — with a business-cost lens.
-      </p>
+      <header className="masthead">
+        <h1>Feel the Trade-off</h1>
+        <p className="sub">
+          Move the slider and feel the precision / recall / F1 trade-off — on real embeddings, through a
+          business-cost lens.
+        </p>
+      </header>
 
       {/* Data source (FR-07 presets / FR-10 CSV / FR-14 live embeddings) */}
       <DataSourcePanel onDocs={handleDocs} />
 
       {/* Predict-then-reveal beat (active recall) */}
       {predict === null ? (
-        <section className="card">
-          <h2>Predict first</h2>
-          <p style={{ margin: '0 0 0.8rem' }}>
+        <section className="panel">
+          <p className="label">Predict first</p>
+          <p style={{ margin: '0 0 var(--s4)' }}>
             Before you touch the slider — as you raise the threshold, what happens to <strong>precision</strong>?
           </p>
-          <div className="controls">
+          <div className="cluster">
             <button className="btn" onClick={() => setPredict('up')}>
               It goes up
             </button>
@@ -87,23 +87,22 @@ export function App() {
           </div>
         </section>
       ) : (
-        <section className="card">
-          <h2>Predict first</h2>
-          <p className="lesson">
+        <section className="panel">
+          <p className="label">Predict first</p>
+          <p className="note">
             {predict === 'up' ? '✓ Usually right — ' : 'Look closely — '}
             raising the threshold keeps only the highest-scoring docs, so <strong>precision tends to rise while
-            recall falls</strong>. It isn't guaranteed monotonic, though: drag the slider and watch the curves
-            cross below.
-            <button className="btn" style={{ marginLeft: '0.6rem' }} onClick={() => setPredict(null)}>
+            recall falls</strong>. Not guaranteed monotonic, though — drag and watch the curves cross.
+            <button className="btn" style={{ marginLeft: 'var(--s3)' }} onClick={() => setPredict(null)}>
               reset
             </button>
           </p>
         </section>
       )}
 
-      {/* Documents & the gate (FR-01 / FR-02) */}
-      <section className="card">
-        <h2>Documents &amp; the threshold gate</h2>
+      {/* HERO — documents, gate, live readout (FR-01 / FR-02) */}
+      <section className="panel hero">
+        <p className="label">Documents &amp; the threshold gate</p>
         <ScoreAxis docs={docs} threshold={threshold} />
         <input
           type="range"
@@ -114,76 +113,87 @@ export function App() {
           onChange={(e) => setThreshold(Number(e.target.value))}
           aria-label="Score threshold"
         />
-        <div className="controls" style={{ justifyContent: 'space-between' }}>
-          <span className="controls" style={{ gap: '0.35rem' }}>
-            <span className="dot" style={{ background: COLORS.relevant }} /> relevant
+        <div className="cluster between" style={{ marginTop: 'var(--s2)' }}>
+          <span className="cluster tight">
+            <span className="dot" style={{ background: COLORS.relevant }} /> <span className="muted">relevant</span>
+            <span className="dot" style={{ background: COLORS.irrelevant, marginLeft: 'var(--s3)' }} />{' '}
+            <span className="muted">irrelevant</span>
           </span>
-          <span className="controls" style={{ gap: '0.35rem' }}>
-            <span className="dot" style={{ background: COLORS.irrelevant }} /> irrelevant
+          <span className="faint" style={{ fontSize: 12 }}>
+            dim dots are below the gate (predicted not relevant)
           </span>
-          <span className="muted">faded dots are below the gate (predicted not relevant)</span>
         </div>
-      </section>
 
-      {/* Metrics + confusion matrix (FR-01) */}
-      <section className="card">
-        <h2>At this threshold</h2>
-        <div className="row">
-          <div className="stat">
-            <div className="label">Precision</div>
-            <div className="value" style={{ color: COLORS.precision }}>
-              {pct(m.precision)}
+        <hr className="rule" />
+
+        <div className="cluster between" style={{ alignItems: 'flex-start' }}>
+          <div className="metrics">
+            <div className="metric">
+              <div className="k">
+                <span className="swatch" style={{ background: COLORS.precision }} /> Precision
+              </div>
+              <div className="v">{pct(m.precision)}</div>
+            </div>
+            <div className="metric">
+              <div className="k">
+                <span className="swatch" style={{ background: COLORS.recall }} /> Recall
+              </div>
+              <div className="v">{pct(m.recall)}</div>
+            </div>
+            <div className="metric">
+              <div className="k">
+                <span className="swatch" style={{ background: COLORS.f1 }} /> {betaLabel}
+              </div>
+              <div className="v">{pct(fbetaVal)}</div>
             </div>
           </div>
-          <div className="stat">
-            <div className="label">Recall</div>
-            <div className="value" style={{ color: COLORS.recall }}>
-              {pct(m.recall)}
-            </div>
-          </div>
-          <div className="stat">
-            <div className="label">{betaLabel}</div>
-            <div className="value" style={{ color: COLORS.f1 }}>
-              {pct(fbetaVal)}
-            </div>
-          </div>
-          <div className="confusion" style={{ marginLeft: 'auto' }}>
-            <div className="cell tp">
+
+          <div className="cm">
+            <div />
+            <div className="cm-h">predicted relevant</div>
+            <div className="cm-h">predicted not</div>
+
+            <div className="cm-rh">actual relevant</div>
+            <div className="cm-cell ok">
               <div className="n">{cm.tp}</div>
-              <div className="k">True Pos</div>
+              <div className="t">True Pos</div>
             </div>
-            <div className="cell fp">
-              <div className="n">{cm.fp}</div>
-              <div className="k">False Pos</div>
-            </div>
-            <div className="cell fn">
+            <div className="cm-cell err">
               <div className="n">{cm.fn}</div>
-              <div className="k">False Neg</div>
+              <div className="t">False Neg</div>
             </div>
-            <div className="cell tn">
+
+            <div className="cm-rh">actual irrelevant</div>
+            <div className="cm-cell err">
+              <div className="n">{cm.fp}</div>
+              <div className="t">False Pos</div>
+            </div>
+            <div className="cm-cell ok">
               <div className="n">{cm.tn}</div>
-              <div className="k">True Neg</div>
+              <div className="t">True Neg</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Threshold sweep (FR-03) + F-beta control (FR-05) */}
-      <section className="card">
-        <h2>Threshold sweep</h2>
+      <section className="panel">
+        <p className="label">Threshold sweep</p>
         <SweepChart data={sweepData} threshold={threshold} markers={sweepMarkers} />
-        <div className="controls" style={{ marginTop: '0.5rem' }}>
-          <span className="muted">Optimize for:</span>
-          {BETA_PRESETS.map((b) => (
-            <button
-              key={b.label}
-              className={`btn ${beta === b.beta ? 'active' : ''}`}
-              onClick={() => setBeta(b.beta)}
-              title={b.hint}
-            >
-              {b.label}
-            </button>
-          ))}
+        <div className="cluster" style={{ marginTop: 'var(--s3)' }}>
+          <span className="muted">Optimize for</span>
+          <div className="cluster tight">
+            {BETA_PRESETS.map((b) => (
+              <button
+                key={b.label}
+                className={`btn ${beta === b.beta ? 'active' : ''}`}
+                onClick={() => setBeta(b.beta)}
+                title={b.hint}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
           <button className="btn btn-primary" onClick={() => setThreshold(fbetaOpt.threshold)}>
             jump to {betaLabel}-best ({fbetaOpt.threshold.toFixed(2)})
           </button>
@@ -191,10 +201,10 @@ export function App() {
       </section>
 
       {/* Cost of error (FR-06) — the differentiator */}
-      <section className="card">
-        <h2>Cost of error — metric → decision</h2>
-        <div className="controls" style={{ marginBottom: '0.75rem' }}>
-          <label>
+      <section className="panel">
+        <p className="label">Cost of error — metric → decision</p>
+        <div className="cluster" style={{ marginBottom: 'var(--s3)' }}>
+          <label className="muted">
             Cost of a false positive{' '}
             <input
               type="number"
@@ -203,7 +213,7 @@ export function App() {
               onChange={(e) => setCostFP(Math.max(0, Number(e.target.value)))}
             />
           </label>
-          <label>
+          <label className="muted">
             Cost of a false negative{' '}
             <input
               type="number"
@@ -214,9 +224,9 @@ export function App() {
           </label>
         </div>
         <CostChart data={costData} threshold={threshold} optimal={costOpt.threshold} />
-        <div className="controls" style={{ marginTop: '0.5rem' }}>
+        <div className="cluster between" style={{ marginTop: 'var(--s3)' }}>
           <span className="muted">
-            Cost-optimal threshold is <strong>{costOpt.threshold.toFixed(2)}</strong> (expected cost {costOpt.cost.toFixed(0)}).
+            Cost-optimal threshold is <strong>{costOpt.threshold.toFixed(2)}</strong> (cost {costOpt.cost.toFixed(0)}).
             You're paying <strong>{expectedCost(docs, threshold, costFP, costFN).toFixed(0)}</strong>.
           </span>
           <button className="btn btn-primary" onClick={() => setThreshold(costOpt.threshold)}>
@@ -225,9 +235,7 @@ export function App() {
         </div>
       </section>
 
-      <footer className="muted" style={{ textAlign: 'center', marginTop: '2rem' }}>
-        All math is computed client-side by a unit-tested core. No data leaves your browser.
-      </footer>
+      <footer className="foot">All math runs client-side in a unit-tested core. No data leaves your browser.</footer>
     </div>
   );
 }

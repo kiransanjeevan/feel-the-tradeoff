@@ -11,7 +11,7 @@ afterEach(cleanup);
 describe('App smoke test', () => {
   it('mounts and renders the core UI', () => {
     render(<App />);
-    expect(screen.getByText('Retrieval Metrics Lab')).toBeTruthy();
+    expect(screen.getByText('Feel the Trade-off')).toBeTruthy();
     expect(screen.getAllByText('Precision').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Recall').length).toBeGreaterThan(0);
     expect(screen.getByText('True Pos')).toBeTruthy();

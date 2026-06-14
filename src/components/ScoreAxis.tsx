@@ -1,15 +1,18 @@
 import type { ScoredDoc } from '../metrics';
 import { COLORS } from '../theme';
 
-// FR-02 — documents as dots on a 0–1 score axis, colored by relevance, with a
-// draggable "gate" at the threshold. Everything right of the gate is predicted
-// relevant. Hand-rolled SVG (cleaner than bending a chart lib to this shape).
+// FR-02 — the signature visual. Documents as glowing dots on a 0–1 score axis,
+// colored by relevance, with a bright gate at the threshold. Everything right
+// of the gate is predicted relevant; dots left of it dim. Hand-rolled SVG.
 
-const W = 600;
-const H = 150;
-const L = 56;
-const R = 560;
+const W = 660;
+const H = 168;
+const L = 70;
+const R = 624;
 const innerW = R - L;
+const yRel = 52;
+const yIrr = 96;
+const baseY = 122;
 const x = (score: number) => L + score * innerW;
 
 export function ScoreAxis({ docs, threshold }: { docs: ScoredDoc[]; threshold: number }) {
@@ -21,52 +24,72 @@ export function ScoreAxis({ docs, threshold }: { docs: ScoredDoc[]; threshold: n
       role="img"
       aria-label={`Document scores on a 0 to 1 axis with the threshold gate at ${threshold.toFixed(2)}`}
     >
+      <defs>
+        <filter id="dotGlow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="3.2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <linearGradient id="predFill" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={COLORS.marker} stopOpacity="0.12" />
+          <stop offset="100%" stopColor={COLORS.marker} stopOpacity="0.015" />
+        </linearGradient>
+      </defs>
+
       {/* predicted-relevant region */}
-      <rect x={gx} y={18} width={R - gx} height={94} fill="rgba(0,114,178,0.07)" />
+      <rect x={gx} y={24} width={R - gx} height={baseY - 24} fill="url(#predFill)" />
 
       {/* baseline + ticks */}
-      <line x1={L} y1={112} x2={R} y2={112} stroke="#ccc" />
-      {[0, 0.5, 1].map((t) => (
+      <line x1={L} y1={baseY} x2={R} y2={baseY} stroke="#2a303a" />
+      {[0, 0.25, 0.5, 0.75, 1].map((t) => (
         <g key={t}>
-          <line x1={x(t)} y1={112} x2={x(t)} y2={117} stroke="#ccc" />
-          <text x={x(t)} y={132} fontSize={12} fill="#999" textAnchor="middle">
+          <line x1={x(t)} y1={baseY} x2={x(t)} y2={baseY + 5} stroke="#343b46" />
+          <text x={x(t)} y={baseY + 20} fontSize={11} fill={COLORS.axisText} textAnchor="middle" fontFamily="ui-monospace, monospace">
             {t}
           </text>
         </g>
       ))}
 
       {/* band labels */}
-      <text x={L - 10} y={50} fontSize={11} fill={COLORS.relevant} textAnchor="end" dominantBaseline="middle">
-        rel
+      <text x={L - 12} y={yRel} fontSize={11} fill={COLORS.relevant} textAnchor="end" dominantBaseline="middle">
+        Relevant
       </text>
-      <text x={L - 10} y={84} fontSize={11} fill={COLORS.irrelevant} textAnchor="end" dominantBaseline="middle">
-        irrel
+      <text x={L - 12} y={yIrr} fontSize={11} fill={COLORS.irrelevant} textAnchor="end" dominantBaseline="middle">
+        Irrelevant
       </text>
 
       {/* the gate */}
-      <line x1={gx} y1={14} x2={gx} y2={114} stroke={COLORS.marker} strokeWidth={2} strokeDasharray="4 3" />
-      <text x={gx} y={10} fontSize={11} fill={COLORS.marker} textAnchor="middle">
-        gate {threshold.toFixed(2)}
-      </text>
+      <line x1={gx} y1={26} x2={gx} y2={baseY} stroke={COLORS.marker} strokeWidth={1.5} />
+      <g transform={`translate(${gx}, 16)`}>
+        <rect x={-22} y={-13} width={44} height={18} rx={5} fill={COLORS.marker} />
+        <text x={0} y={-1} fontSize={11} fontWeight={600} fill="#0a0d16" textAnchor="middle" fontFamily="ui-monospace, monospace">
+          {threshold.toFixed(2)}
+        </text>
+      </g>
 
       {/* document dots */}
-      {docs.map((d, i) => (
-        <circle
-          key={i}
-          cx={x(d.score)}
-          cy={d.relevant ? 50 : 84}
-          r={7}
-          fill={d.relevant ? COLORS.relevant : COLORS.irrelevant}
-          fillOpacity={d.score >= threshold ? 0.95 : 0.35}
-          stroke="#fff"
-          strokeWidth={1.5}
-        >
-          <title>
-            score {d.score.toFixed(2)} · {d.relevant ? 'relevant' : 'irrelevant'} ·{' '}
-            {d.score >= threshold ? 'predicted relevant' : 'predicted not relevant'}
-          </title>
-        </circle>
-      ))}
+      {docs.map((d, i) => {
+        const passed = d.score >= threshold;
+        const color = d.relevant ? COLORS.relevant : COLORS.irrelevant;
+        return (
+          <circle
+            key={i}
+            cx={x(d.score)}
+            cy={d.relevant ? yRel : yIrr}
+            r={6.5}
+            fill={color}
+            fillOpacity={passed ? 1 : 0.28}
+            filter={passed ? 'url(#dotGlow)' : undefined}
+          >
+            <title>
+              score {d.score.toFixed(2)} · {d.relevant ? 'relevant' : 'irrelevant'} ·{' '}
+              {passed ? 'predicted relevant' : 'predicted not relevant'}
+            </title>
+          </circle>
+        );
+      })}
     </svg>
   );
 }

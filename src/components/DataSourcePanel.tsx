@@ -32,8 +32,6 @@ const SAMPLE_DOCS: LabeledDoc[] = [
   { text: 'Two-factor authentication adds a second login step.', relevant: false },
 ];
 
-const errorBanner = { borderColor: '#D55E00', background: '#fdeee6', color: '#5a2400' } as const;
-
 export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: SourceMeta) => void }) {
   const [source, setSource] = useState<Source>('preset');
   const [presetId, setPresetId] = useState(DEFAULT_PRESET.id);
@@ -116,11 +114,11 @@ export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: 
   const canEmbed = !embedding && query.trim().length > 0 && edocs.some((d) => d.text.trim().length > 0);
 
   return (
-    <section className="card">
-      <h2>Data source</h2>
-      <div className="controls" style={{ marginBottom: '1rem' }}>
+    <section className="panel">
+      <p className="label">Data source</p>
+      <div className="segmented" role="tablist" style={{ marginBottom: 'var(--s4)' }}>
         {TABS.map(([s, label]) => (
-          <button key={s} className={`btn ${source === s ? 'active' : ''}`} onClick={() => setSource(s)}>
+          <button key={s} role="tab" aria-selected={source === s} onClick={() => setSource(s)}>
             {label}
           </button>
         ))}
@@ -128,7 +126,7 @@ export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: 
 
       {source === 'preset' && (
         <div>
-          <div className="controls">
+          <div className="cluster">
             <select value={presetId} onChange={(e) => handlePreset(e.target.value)} aria-label="Scenario">
               {PRESETS.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -138,7 +136,7 @@ export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: 
             </select>
             <span className="muted">{activePreset.blurb}</span>
           </div>
-          <p className="lesson" style={{ marginTop: '0.9rem' }}>
+          <p className="note" style={{ marginTop: 'var(--s4)' }}>
             {activePreset.lesson}
           </p>
         </div>
@@ -146,10 +144,10 @@ export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: 
 
       {source === 'csv' && (
         <div>
-          <p className="muted" style={{ marginTop: 0 }}>
+          <p className="muted" style={{ marginTop: 0, marginBottom: 'var(--s3)' }}>
             Upload a CSV with <code>score,label</code> columns (label = 1/0, true/false, or relevant/irrelevant).
           </p>
-          <div className="controls">
+          <div className="cluster">
             <input
               type="file"
               accept=".csv,text/csv"
@@ -161,12 +159,12 @@ export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: 
             </button>
           </div>
           {csvError && (
-            <p className="lesson" style={{ ...errorBanner, marginTop: '0.8rem' }}>
+            <p className="note warn" style={{ marginTop: 'var(--s3)' }}>
               {csvError}
             </p>
           )}
           {!csvError && csvCount > 0 && (
-            <p className="muted" style={{ marginTop: '0.8rem' }}>
+            <p className="muted" style={{ marginTop: 'var(--s3)' }}>
               Loaded {csvCount} rows — explore them in the views below.
             </p>
           )}
@@ -175,36 +173,30 @@ export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: 
 
       {source === 'embeddings' && (
         <div>
-          <p className="muted" style={{ marginTop: 0 }}>
+          <p className="muted" style={{ marginTop: 0, marginBottom: 'var(--s3)' }}>
             Type a query and some documents, mark which are truly relevant, then embed — real cosine similarity
             becomes the score. Runs entirely in your browser.
           </p>
-          <label style={{ display: 'block', marginBottom: '0.6rem' }}>
-            Query
-            <input
-              style={{ width: '100%', padding: '0.45rem 0.6rem', border: '1px solid #e6e6e6', borderRadius: 8, marginTop: '0.25rem' }}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
+          <label className="field-label">Query</label>
+          <input className="field block" value={query} onChange={(e) => setQuery(e.target.value)} style={{ marginBottom: 'var(--s3)' }} />
           {edocs.map((d, i) => (
-            <div key={i} className="controls" style={{ marginBottom: '0.4rem', flexWrap: 'nowrap' }}>
+            <div key={i} className="doc-row">
               <input
-                style={{ flex: 1, padding: '0.4rem 0.6rem', border: '1px solid #e6e6e6', borderRadius: 8 }}
+                className="field"
                 value={d.text}
                 placeholder={`Document ${i + 1}`}
                 onChange={(e) => updateDoc(i, { text: e.target.value })}
               />
-              <label className="muted" style={{ whiteSpace: 'nowrap' }}>
+              <label>
                 <input type="checkbox" checked={d.relevant} onChange={(e) => updateDoc(i, { relevant: e.target.checked })} />{' '}
                 relevant
               </label>
-              <button className="btn" onClick={() => removeDoc(i)} aria-label={`Remove document ${i + 1}`}>
+              <button className="btn icon" onClick={() => removeDoc(i)} aria-label={`Remove document ${i + 1}`}>
                 ✕
               </button>
             </div>
           ))}
-          <div className="controls" style={{ marginTop: '0.6rem' }}>
+          <div className="cluster" style={{ marginTop: 'var(--s3)' }}>
             <button className="btn" onClick={addDoc}>
               + add document
             </button>
@@ -218,11 +210,11 @@ export function DataSourcePanel({ onDocs }: { onDocs: (docs: ScoredDoc[], meta: 
               </span>
             )}
           </div>
-          <p className="muted" style={{ marginTop: '0.6rem' }}>
+          <p className="faint" style={{ fontSize: 12, marginTop: 'var(--s3)' }}>
             First run downloads the model (~23 MB) and caches it. Nothing you type leaves your browser.
           </p>
           {embedError && (
-            <p className="lesson" style={{ ...errorBanner, marginTop: '0.6rem' }}>
+            <p className="note warn" style={{ marginTop: 'var(--s3)' }}>
               {embedError}
             </p>
           )}
