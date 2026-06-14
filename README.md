@@ -2,10 +2,11 @@
 
 **An interactive retrieval-metrics lab.** Stop memorizing precision and recall — move the slider and *feel* the trade-off, with real metric math and a business-cost lens.
 
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://feel-the-tradeoff.vercel.app)
 [![CI](https://github.com/kiransanjeevan/feel-the-tradeoff/actions/workflows/ci.yml/badge.svg)](https://github.com/kiransanjeevan/feel-the-tradeoff/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-🔗 **Live demo:** _deploying — link coming_ <!-- TODO: replace with https://feel-the-tradeoff.vercel.app once deployed -->
+🔗 **[Open the live demo →](https://feel-the-tradeoff.vercel.app)**
 
 <!-- TODO: add docs/demo.gif — record the threshold slider driving the curves + cost-optimal jump -->
 > _Demo GIF coming. For now: `npm install && npm run dev`._
