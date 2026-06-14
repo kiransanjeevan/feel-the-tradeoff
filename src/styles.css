@@ -332,6 +332,13 @@ input[type='range']::-moz-range-thumb {
 }
 
 /* ── metric readout ───────────────────────────────────── */
+.readout {
+  display: flex;
+  gap: var(--s6);
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
 .metrics {
   display: flex;
   gap: var(--s6);
@@ -453,6 +460,7 @@ input[type='range']::-moz-range-thumb {
 }
 .doc-row .field {
   flex: 1;
+  min-width: 0; /* let the input shrink instead of overflowing the row */
 }
 .doc-row label {
   display: flex;
@@ -479,4 +487,68 @@ footer.foot {
 
 a {
   color: var(--accent);
+}
+
+/* ── mobile ───────────────────────────────────────────── */
+@media (max-width: 680px) {
+  .wrap {
+    padding: var(--s5) var(--s4) var(--s7);
+  }
+  .masthead {
+    margin-bottom: var(--s5);
+  }
+  .masthead h1 {
+    font-size: 25px;
+  }
+  .masthead .sub {
+    font-size: 14px;
+  }
+  .panel,
+  .panel.hero {
+    padding: var(--s4);
+  }
+
+  /* stack the metric readout above the confusion matrix */
+  .readout {
+    flex-direction: column;
+    gap: var(--s5);
+  }
+  .metrics {
+    gap: var(--s5);
+    width: 100%;
+  }
+  .metric .v {
+    font-size: 30px;
+  }
+
+  /* let the 2×2 use the full width and shrink its cells */
+  .cm {
+    width: 100%;
+  }
+  .cm-cell {
+    min-width: 0;
+    padding: var(--s3) var(--s2);
+  }
+  .cm-cell .n {
+    font-size: 22px;
+  }
+  .cm-h,
+  .cm-rh {
+    font-size: 10px;
+  }
+
+  /* full-width segmented tabs = bigger tap targets */
+  .segmented {
+    display: flex;
+    width: 100%;
+  }
+  .segmented button {
+    flex: 1;
+    padding: 8px 6px;
+  }
+
+  /* keep the stat panels' controls from feeling cramped */
+  .cluster.between {
+    gap: var(--s3);
+  }
 }

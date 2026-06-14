@@ -126,7 +126,7 @@ export function App() {
 
         <hr className="rule" />
 
-        <div className="cluster between" style={{ alignItems: 'flex-start' }}>
+        <div className="readout">
           <div className="metrics">
             <div className="metric">
               <div className="k">
