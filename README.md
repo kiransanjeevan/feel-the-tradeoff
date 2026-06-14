@@ -8,7 +8,7 @@
 
 🔗 **[Open the live demo →](https://feel-the-tradeoff.vercel.app)**
 
-![Dragging the threshold slider — the score-axis gate, precision/recall/F1 metrics, confusion matrix, and the sweep chart all update together, then a jump to the F2-optimal threshold.](docs/demo.gif)
+![Dragging the threshold slider — the score-axis gate, the precision/recall/F1 readout, the 2×2 confusion matrix, and the threshold-sweep chart all update together in real time.](docs/demo.gif)
 
 ---
 
@@ -34,9 +34,10 @@ The tool is worthless if the math is wrong, so the math is the anchor. [`src/met
 ## Tech
 
 - **React + TypeScript + Vite** — static SPA, no backend, free to host
+- **transformers.js** (`@huggingface/transformers`) — MiniLM embeddings via WebGPU/WASM, **dynamically imported** so the ML runtime never bloats the core bundle (preset/CSV users download none of it)
 - **Recharts** for the sweep/cost charts; hand-rolled SVG for the score axis
-- **Vitest + jsdom** — metrics unit tests and component smoke tests (30 tests total)
-- **Okabe-Ito colorblind-safe palette** (WCAG-minded)
+- **Vitest + jsdom** — metrics unit tests and component smoke tests (44 tests total)
+- **Dark "instrument" UI**, responsive, with a colorblind-safe (Okabe-Ito-derived) data palette
 - All computation is client-side — **nothing leaves your browser**
 
 ## Run locally
@@ -44,7 +45,7 @@ The tool is worthless if the math is wrong, so the math is the anchor. [`src/met
 ```bash
 npm install
 npm run dev       # start the lab on localhost
-npm test          # 30 tests (math core + UI smoke)
+npm test          # 44 tests (math core + data parsing + UI smoke)
 npm run build     # production build to dist/
 ```
 
