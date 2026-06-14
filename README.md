@@ -8,8 +8,7 @@
 
 🔗 **[Open the live demo →](https://feel-the-tradeoff.vercel.app)**
 
-<!-- TODO: add docs/demo.gif — record the threshold slider driving the curves + cost-optimal jump -->
-> _Demo GIF coming. For now: `npm install && npm run dev`._
+![Dragging the threshold slider — the score-axis gate, precision/recall/F1 metrics, confusion matrix, and the sweep chart all update together, then a jump to the F2-optimal threshold.](docs/demo.gif)
 
 ---
 
